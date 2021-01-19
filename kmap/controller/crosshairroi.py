@@ -4,7 +4,6 @@ import pyqtgraph as pg
 
 # PyQt5 Imports
 from PyQt5 import uic
-from PyQt5.QtCore import QDir
 
 # Own Imports
 from kmap import __directory__
@@ -14,7 +13,7 @@ from kmap.model.crosshair_model import CrosshairROIModel
 from kmap.controller.crosshair import CrosshairBase
 
 # Load .ui File
-UI_file = __directory__ + QDir.toNativeSeparators('/ui/crosshairroi.ui')
+UI_file = __directory__ / 'ui/crosshairroi.ui'
 CrosshairROI_UI, _ = uic.loadUiType(UI_file)
 
 
@@ -119,10 +118,24 @@ class CrosshairROIBase(CrosshairBase):
         else:
             self.area_value_label.setText('%.2f' % intensity)
 
+    def save_state(self):
+
+        save = super().save_state()
+        save.update(
+            {'enable_roi': self.enable_roi_checkbox.checkState()})
+
+        return save
+
+    def restore_state(self, save):
+
+        super().restore_state(save)
+
+        self.enable_roi_checkbox.setCheckState(save['enable_roi'])
+
     def _set_model(self, model=None):
 
         if model is None:
-            self.model = CrosshairROIModel(x=0, y=0, radius=0.02)
+            self.model = CrosshairROIModel(x=0, y=0, radius=0.2)
 
         else:
             self.model = model
@@ -139,8 +152,7 @@ class CrosshairROIBase(CrosshairBase):
                                 rotatable=False,
                                 resizable=True,
                                 removable=False,
-                                pen='k',
-                                handlePen='r')
+                                pen='k')
         self.plot_item.addItem(self.roi)
 
     def _connect(self):
@@ -157,7 +169,6 @@ class CrosshairROIBase(CrosshairBase):
 class CrosshairROI(CrosshairROIBase, CrosshairROI_UI):
 
     def __init__(self, plot_item):
-
         # Setup GUI
         super(CrosshairROI, self).__init__(plot_item)
         self.setupUi(self)

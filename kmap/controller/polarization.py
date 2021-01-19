@@ -3,19 +3,18 @@ import logging
 
 # PyQt5 Imports
 from PyQt5 import uic
-from PyQt5.QtCore import pyqtSignal, QDir
+from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QWidget
 
 # Own Imports
 from kmap import __directory__
 
 # Load .ui File
-UI_file = __directory__ + QDir.toNativeSeparators('/ui/polarization.ui')
+UI_file = __directory__ / 'ui/polarization.ui'
 Polarization_UI, _ = uic.loadUiType(UI_file)
 
 
 class Polarization(QWidget, Polarization_UI):
-
     polarization_changed = pyqtSignal()
 
     def __init__(self, *args, **kwargs):
@@ -37,6 +36,30 @@ class Polarization(QWidget, Polarization_UI):
         angles = self._get_angles()
 
         return (Ak_type, polarization, *angles)
+
+    def save_state(self):
+
+        Ak = self.ak_combobox.currentIndex()
+        polarization = self.polarization_combobox.currentIndex()
+        angle = self.angle_spinbox.value()
+        azimuth = self.azimuth_spinbox.value()
+
+        save = {'Ak': Ak, 'polarization': polarization,
+                'angle': angle, 'azimuth': azimuth}
+
+        return save
+
+    def restore_state(self, save):
+
+        Ak = save['Ak']
+        polarization = save['polarization']
+        angle = save['angle']
+        azimuth = save['azimuth']
+
+        self.ak_combobox.setCurrentIndex(Ak)
+        self.polarization_combobox.setCurrentIndex(polarization)
+        self.angle_spinbox.setValue(angle)
+        self.azimuth_spinbox.setValue(azimuth)
 
     def _get_factor(self):
 
@@ -71,7 +94,7 @@ class Polarization(QWidget, Polarization_UI):
                 polarization = 's'
 
             elif Ak_index == 3:
-                polarization = 'unpolarized'                
+                polarization = 'unpolarized'
 
             elif Ak_index == 4:
                 polarization = 'C+'

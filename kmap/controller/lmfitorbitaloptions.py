@@ -1,6 +1,6 @@
 # PyQt5 Imports
 from PyQt5 import uic
-from PyQt5.QtCore import pyqtSignal, QDir
+from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QWidget
 
 # Own Imports
@@ -8,12 +8,11 @@ from kmap import __directory__
 from kmap.config.config import config
 
 # Load .ui File
-UI_file = __directory__ + QDir.toNativeSeparators('/ui/lmfitorbitaloptions.ui')
+UI_file = __directory__ / 'ui/lmfitorbitaloptions.ui'
 LMFitOrbitalOptions_UI, _ = uic.loadUiType(UI_file)
 
 
 class LMFitOrbitalOptions(QWidget, LMFitOrbitalOptions_UI):
-
     symmetrization_changed = pyqtSignal(str)
     polarization_changed = pyqtSignal(str, str)
 
@@ -23,6 +22,20 @@ class LMFitOrbitalOptions(QWidget, LMFitOrbitalOptions_UI):
         super(LMFitOrbitalOptions, self).__init__(*args, **kwargs)
         self.setupUi(self)
         self._connect()
+
+    def save_state(self):
+
+        save = {'factor': self.ak_combobox.currentIndex(),
+                'polarization': self.polarization_combobox.currentIndex(),
+                'symmetry': self.symmetrize_combobox.currentIndex()}
+
+        return save
+
+    def restore_state(self, save):
+
+        self.ak_combobox.setCurrentIndex(save['factor'])
+        self.polarization_combobox.setCurrentIndex(save['polarization'])
+        self.symmetrize_combobox.setCurrentIndex(save['symmetry'])
 
     def get_symmetrization(self):
 

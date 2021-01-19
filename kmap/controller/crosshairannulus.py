@@ -4,7 +4,6 @@ import pyqtgraph as pg
 
 # PyQt5 Imports
 from PyQt5 import uic
-from PyQt5.QtCore import QDir
 
 # Own Imports
 from kmap import __directory__
@@ -14,7 +13,7 @@ from kmap.model.crosshair_model import CrosshairAnnulusModel
 from kmap.controller.crosshairroi import CrosshairROIBase
 
 # Load .ui File
-UI_file = __directory__ + QDir.toNativeSeparators('/ui/crosshairannulus.ui')
+UI_file = __directory__ / 'ui/crosshairannulus.ui'
 CrosshairAnnulus_UI, _ = uic.loadUiType(UI_file)
 
 
@@ -120,6 +119,20 @@ class CrosshairAnnulusBase(CrosshairROIBase):
         else:
             self.ring_value_label.setText('%.2f' % intensity)
 
+    def save_state(self):
+
+        save = super().save_state()
+        save.update(
+            {'enable_annulus': self.enable_annulus_checkbox.checkState()})
+
+        return save
+
+    def restore_state(self, save):
+
+        super().restore_state(save)
+
+        self.enable_annulus_checkbox.setCheckState(save['enable_annulus'])
+
     def _set_model(self, model=None):
 
         if model is None:
@@ -141,8 +154,7 @@ class CrosshairAnnulusBase(CrosshairROIBase):
                                     rotatable=False,
                                     resizable=True,
                                     removable=False,
-                                    pen='k',
-                                    handlePen='r')
+                                    pen='k')
         self.plot_item.addItem(self.annulus)
 
     def _connect(self):
@@ -161,7 +173,6 @@ class CrosshairAnnulusBase(CrosshairROIBase):
 class CrosshairAnnulus(CrosshairAnnulusBase, CrosshairAnnulus_UI):
 
     def __init__(self, plot_item):
-
         # Setup GUI
         super(CrosshairAnnulus, self).__init__(plot_item)
         self.setupUi(self)

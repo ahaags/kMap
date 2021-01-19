@@ -4,7 +4,6 @@ from os.path import abspath
 # PyQt5 Imports
 from PyQt5 import uic
 from PyQt5.QtGui import QTextDocument
-from PyQt5.QtCore import QDir
 
 # Own Imports
 from kmap import __directory__
@@ -21,6 +20,25 @@ class FileTab(Tab):
         self.title = title
         self.path = path
         self.richText = richText
+
+    @classmethod
+    def init_from_save(cls, save):
+
+        path = save['path']
+        title = save['title']
+        richText = save['richText']
+
+        tab = cls(path, title, richText)
+
+        return tab
+
+    def save_state(self):
+
+        save = {'title': self.title,
+                'path': self.path,
+                'richText': self.richText}
+
+        return save, []
 
     def reload_text(self):
 
@@ -55,7 +73,7 @@ class FileTab(Tab):
     def _setup(self):
 
         label = self.title_line_edit.text()
-        self.title_line_edit.setText(label + self.path)
+        self.title_line_edit.setText(label + str(self.path))
 
     def _connect(self):
 
@@ -65,14 +83,13 @@ class FileTab(Tab):
 
 
 # Load .ui File
-UI_file = __directory__ + QDir.toNativeSeparators('/ui/fileviewertab.ui')
+UI_file = __directory__ / 'ui/fileviewertab.ui'
 FileViewerTab_UI, _ = uic.loadUiType(UI_file)
 
 
 class FileViewerTab(FileTab, FileViewerTab_UI):
 
     def __init__(self, path, title, richText=False):
-
         # Setup GUI
         super(FileViewerTab, self).__init__(path, title, richText=richText)
         self.setupUi(self)
@@ -83,13 +100,13 @@ class FileViewerTab(FileTab, FileViewerTab_UI):
 
 
 # Load .ui File
-UI_file = __directory__ + QDir.toNativeSeparators('/ui/fileeditortab.ui')
+UI_file = __directory__ / 'ui/fileeditortab.ui'
 FileEditorTab_UI, _ = uic.loadUiType(UI_file)
 
 
 class FileEditorTab(FileTab, FileEditorTab_UI):
 
-    def __init__(self, path, title):
+    def __init__(self, path, title, *args, **kwargs):
 
         # Setup GUI
         super(FileEditorTab, self).__init__(path, title, richText=False)

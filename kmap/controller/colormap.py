@@ -1,10 +1,12 @@
 # Python Imports
+import os
 import logging
+import traceback
+from shutil import copy
 
 # PyQt5 Imports
 from PyQt5 import uic
 from PyQt5.QtWidgets import QWidget
-from PyQt5.QtCore import QDir
 
 # Own Imports
 from kmap import __directory__
@@ -12,7 +14,7 @@ from kmap.model.colormap_model import ColormapModel
 from kmap.config.config import config
 
 # Load .ui File
-UI_file = __directory__ + QDir.toNativeSeparators('/ui/colormap.ui')
+UI_file = __directory__ / 'ui/colormap.ui'
 Colormap_UI, _ = uic.loadUiType(UI_file)
 
 
@@ -25,8 +27,7 @@ class Colormap(QWidget, Colormap_UI):
         self.setupUi(self)
         self._connect()
 
-        # Path for the .json file containing the colormaps
-        self.path = __directory__ + config.get_key('paths', 'colormap')
+        self.path = self.get_path()
         self.model = ColormapModel(plot_item)
 
         self.load_colormaps()
@@ -45,6 +46,39 @@ class Colormap(QWidget, Colormap_UI):
 
         self._update_combobox()
         self.set_default_colormap()
+
+    def save_state(self):
+
+        current_colormap = self.combobox.currentText()
+
+        save = {'current_colormap': current_colormap}
+
+        return save
+
+    def get_path(self):
+
+        # Path for the .json file containing the colormaps
+        temp = __directory__ / config.get_key('paths', 'colormap')
+        user = temp / 'colormaps_user.json'
+
+        if not os.path.isfile(user):
+            default = temp / 'colormaps_default.json'
+            copy(default, user)
+
+        return user
+        
+
+    def restore_state(self, save):
+
+        try:
+            self.set_colormap(save['current_colormap'])
+
+        except ValueError:
+            log = logging.getLogger('kmap')
+
+            log.error(
+                'This colormap does not exist. Please save the colormap first.')
+            log.error(traceback.format_exc())
 
     def add_colormap(self):
 
@@ -66,17 +100,7 @@ class Colormap(QWidget, Colormap_UI):
 
     def save(self):
 
-        try:
-            self.model.save_colormaps(self.path)
-
-        except Exception:
-
-            log = logging.getLogger('kmap')
-
-            log.error('Colormaps could not be saved')
-            log.error(traceback.format_exc())
-
-            os.remove(path_temp)
+        self.model.save_colormaps(self.path)
 
     def set_colormap(self, name):
 
@@ -86,7 +110,15 @@ class Colormap(QWidget, Colormap_UI):
     def set_default_colormap(self):
 
         default_colormap = config.get_key('colormap', 'default')
-        self.set_colormap(default_colormap)
+
+        try:
+            self.set_colormap(default_colormap)
+
+        except ValueError:
+            log = logging.getLogger('kmap')
+            log.error(
+                'The colormap set as default does not exist.')
+            log.error(traceback.format_exc())
 
     def _update_combobox(self):
 

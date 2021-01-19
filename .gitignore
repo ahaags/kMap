@@ -10,7 +10,6 @@ __pycache__/
 .Python
 build/
 develop-eggs/
-dist/
 downloads/
 eggs/
 .eggs/
@@ -141,8 +140,10 @@ cython_debug/
 report.tar.gz
 
 # User Settings
-*_user.ini
+*_user*
 
 # Other
 /src
 example/testing
+*.kmap
+.idea/

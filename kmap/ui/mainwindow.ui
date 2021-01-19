@@ -38,7 +38,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>22</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="file_menu">
@@ -58,6 +58,7 @@
      </property>
      <addaction name="show_matplotlib"/>
      <addaction name="export_txt"/>
+     <addaction name="export_hdf5"/>
     </widget>
     <widget class="QMenu" name="log_menu">
      <property name="title">
@@ -78,6 +79,8 @@
     <addaction name="load_hdf5_menu"/>
     <addaction name="cube_menu"/>
     <addaction name="separator"/>
+    <addaction name="save_project_action"/>
+    <addaction name="load_project_action"/>
     <addaction name="export_menu"/>
     <addaction name="separator"/>
     <addaction name="log_menu"/>
@@ -89,6 +92,10 @@
     <addaction name="open_sim_tab_action"/>
     <addaction name="open_profile_tab_action"/>
     <addaction name="open_lmfit_tab_action"/>
+    <addaction name="open_splitview_tab_action"/>
+    <addaction name="separator"/>
+    <addaction name="duplicate_tab_action"/>
+    <addaction name="close_tab_action"/>
    </widget>
    <widget class="QMenu" name="settings_menu">
     <property name="title">
@@ -244,6 +251,36 @@ Currently the profile plot and the lmfit plot tab support this feature.</string>
   <action name="load_sliced_from_cubefile_action">
    <property name="text">
     <string>From Cubefile ...</string>
+   </property>
+  </action>
+  <action name="duplicate_tab_action">
+   <property name="text">
+    <string>Duplicate current Tab</string>
+   </property>
+  </action>
+  <action name="close_tab_action">
+   <property name="text">
+    <string>Close current Tab</string>
+   </property>
+  </action>
+  <action name="save_project_action">
+   <property name="text">
+    <string>Save Project...</string>
+   </property>
+  </action>
+  <action name="load_project_action">
+   <property name="text">
+    <string>Load Project...</string>
+   </property>
+  </action>
+  <action name="export_hdf5">
+   <property name="text">
+    <string>Hdf5</string>
+   </property>
+  </action>
+  <action name="open_splitview_tab_action">
+   <property name="text">
+    <string>Open new Split-View Tab</string>
    </property>
   </action>
  </widget>

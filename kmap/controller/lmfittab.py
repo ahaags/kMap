@@ -3,13 +3,15 @@
 This file defines two similar types of tabs: the LMFit and the
 LMFitResult tab as well as a common base class LMFitBaseTab.
 """
+# Python Imports
+import logging
 
 # Third Party Imports
 import numpy as np
 
 # PyQt5 Imports
 from PyQt5 import uic
-from PyQt5.QtCore import QDir, pyqtSignal, Qt
+from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout
 
 # Own Imports
@@ -28,21 +30,19 @@ from kmap.controller.lmfitorbitaloptions import LMFitOrbitalOptions
 from kmap.config.config import config
 
 # Load .ui File
-UI_file = __directory__ + QDir.toNativeSeparators('/ui/lmfittab.ui')
+UI_file = __directory__ / 'ui/lmfittab.ui'
 LMFitTab_UI, _ = uic.loadUiType(UI_file)
 
 
 class LMFitBaseTab(Tab):
 
     def refresh_sliced_plot(self):
-
         index = self.slider.get_index()
         kmap = self.model.get_sliced_kmap(index)
 
         self.sliced_plot.plot(kmap)
 
     def refresh_selected_plot(self, param=None):
-
         ID = self.tree.get_selected_orbital_ID()
 
         if ID == -1:
@@ -53,14 +53,12 @@ class LMFitBaseTab(Tab):
             self.selected_plot.plot(kmap)
 
     def refresh_sum_plot(self, param=None):
-
         kmap = self.model.get_weighted_sum_kmap(param)
         self.sum_plot.plot(kmap)
 
         return kmap
 
     def refresh_residual_plot(self, param=None, weight_sum_data=None):
-
         index = self.slider.get_index()
         residual = self.model.get_residual(index, param, weight_sum_data)
 
@@ -79,7 +77,6 @@ class LMFitBaseTab(Tab):
         self.update_chi2_label(weight_sum_data)
 
     def update_chi2_label(self, weight_sum_data=None):
-
         slice_index = self.slider.get_index()
         reduced_chi2 = self.model.get_reduced_chi2(
             slice_index, weight_sum_data)
@@ -87,25 +84,21 @@ class LMFitBaseTab(Tab):
                                     % reduced_chi2)
 
     def transpose(self, constant_axis):
-
         self.model.transpose(constant_axis)
         self.refresh_sliced_plot()
         self.refresh_residual_plot()
 
     def closeEvent(self, event):
-
         del self.model
 
         Tab.closeEvent(self, event)
 
     def _refresh_orbital_plots(self):
-
         self.refresh_selected_plot()
         kmap = self.refresh_sum_plot()
         self.refresh_residual_plot(weight_sum_data=kmap)
 
     def _setup(self):
-
         self.slider = DataSlider(self.model.sliced_data)
         self.crosshair = CrosshairAnnulus(self.residual_plot)
         self.colormap = Colormap(
@@ -115,7 +108,6 @@ class LMFitBaseTab(Tab):
         residual_colormap.set_colormap('blueAndRed')
 
     def _connect(self):
-
         self.crosshair.crosshair_changed.connect(self.crosshair.update_label)
 
         self.slider.slice_changed.connect(self.change_slice)
@@ -126,12 +118,13 @@ class LMFitBaseTab(Tab):
 
 
 class LMFitTab(LMFitBaseTab, LMFitTab_UI):
+    fit_finished = pyqtSignal(list, dict)
 
-    fit_finished = pyqtSignal(list, list, dict)
-
-    def __init__(self, sliced_data, orbitals):
-
-        self.model = LMFitModel(sliced_data, orbitals)
+    def __init__(self, sliced_tab, orbital_tab):
+        self.sliced_tab = sliced_tab
+        self.orbital_tab = orbital_tab
+        self.model = LMFitModel(sliced_tab.get_data(),
+                                orbital_tab.get_orbitals())
 
         # Setup GUI
         super(LMFitTab, self).__init__()
@@ -145,20 +138,40 @@ class LMFitTab(LMFitBaseTab, LMFitTab_UI):
         kmap = self.refresh_sum_plot()
         self.refresh_residual_plot(weight_sum_data=kmap)
 
-    def get_title(self):
+    @classmethod
+    def init_from_save(cls, save, sliced_data, orbitals):
+        tab = LMFitTab(sliced_data, orbitals)
 
+        tab.slider.restore_state(save['slider']),
+        tab.crosshair.restore_state(save['crosshair']),
+        tab.orbital_options.restore_state(save['orbital_options']),
+        tab.interpolation.restore_state(save['interpolation']),
+        tab.lmfit_options.restore_state(save['lmfit_options'])
+        tab.tree.restore_state(save['tree'])
+
+        return tab
+
+    def get_title(self):
         return 'LM-Fit'
 
+    def get_data(self):
+        return [self.model.sliced_data, self.model.orbitals]
+
     def trigger_fit(self):
+        try:
+            results = self.model.fit()
 
-        results = self.model.fit()
+        except ValueError as e:
+            logging.getLogger('kmap').warning(str(e))
+            self.lmfit_options.update_fit_button()
+
+            return
+
         settings = self.model.get_settings()
-        data = [self.model.sliced_data, self.model.orbitals]
 
-        self.fit_finished.emit(data, results, settings)
+        self.fit_finished.emit(results, settings)
 
     def change_slice(self):
-
         axis_index = self.slider.get_axis()
         slice_policy = self.lmfit_options.get_slice_policy()
         combined = True if slice_policy == 'all combined' else False
@@ -172,7 +185,6 @@ class LMFitTab(LMFitBaseTab, LMFitTab_UI):
         self.refresh_residual_plot()
 
     def change_axis(self):
-
         axis = self.interpolation.get_axis()
         self.model.set_axis(axis)
 
@@ -181,8 +193,18 @@ class LMFitTab(LMFitBaseTab, LMFitTab_UI):
         kmap = self.refresh_sum_plot()
         self.refresh_residual_plot(weight_sum_data=kmap)
 
-    def _change_slice_policy(self, slice_policy):
+    def save_state(self):
+        save = {'title': self.title,
+                'slider': self.slider.save_state(),
+                'crosshair': self.crosshair.save_state(),
+                'orbital_options': self.orbital_options.save_state(),
+                'interpolation': self.interpolation.save_state(),
+                'lmfit_options': self.lmfit_options.save_state(),
+                'tree': self.tree.save_state()}
 
+        return save, [self.sliced_tab, self.orbital_tab]
+
+    def _change_slice_policy(self, slice_policy):
         axis = self.slider.get_axis()
 
         if slice_policy == 'all':
@@ -196,12 +218,10 @@ class LMFitTab(LMFitBaseTab, LMFitTab_UI):
             self.model.set_slices('all', axis_index=axis, combined=True)
 
     def _change_region(self, *args):
-
         self.model.set_region(*args)
         self.refresh_residual_plot()
 
     def _change_background(self, *args):
-
         new_variables = self.model.set_background_equation(*args)
         for variable in new_variables:
             self.tree.add_equation_parameter(variable)
@@ -210,7 +230,6 @@ class LMFitTab(LMFitBaseTab, LMFitTab_UI):
         self.refresh_residual_plot()
 
     def _setup(self):
-
         LMFitBaseTab._setup(self)
 
         self.orbital_options = LMFitOrbitalOptions()
@@ -236,7 +255,6 @@ class LMFitTab(LMFitBaseTab, LMFitTab_UI):
         self.layout.insertWidget(1, self.tree)
 
     def _connect(self):
-
         LMFitBaseTab._connect(self)
 
         self.interpolation.interpolation_changed.connect(self.change_axis)
@@ -260,15 +278,15 @@ class LMFitTab(LMFitBaseTab, LMFitTab_UI):
 
 
 class LMFitResultTab(LMFitBaseTab, LMFitTab_UI):
-
     open_plot_tab = pyqtSignal(list, list, Axis)
 
-    def __init__(self, data, results, settings):
-
+    def __init__(self, lmfit_tab, results, settings):
         self.results = results
+        self.lmfit_tab = lmfit_tab
         self.current_result = self.results[0]
+        self.settings = settings
 
-        self.model = LMFitModel(*data)
+        self.model = LMFitModel(*self.lmfit_tab.get_data())
         self.model.set_settings(settings)
 
         # Setup GUI
@@ -283,12 +301,51 @@ class LMFitResultTab(LMFitBaseTab, LMFitTab_UI):
         kmap = self.refresh_sum_plot()
         self.refresh_residual_plot(weight_sum_data=kmap)
 
-    def get_title(self):
+    @classmethod
+    def init_from_save(cls, save, tab, ID_map=None):
+        results = save['results']
 
+        if ID_map is not None:
+            for result in results:
+                result = LMFitResultTab._apply_ID_map(result[1], ID_map)
+
+        settings = save['settings']
+
+        tab = LMFitResultTab(tab, results, settings)
+
+        return tab
+
+    @classmethod
+    def _apply_ID_map(cls, result, ID_map):
+        params = result.params
+        new_params = params.copy()
+
+        for map_ in ID_map:
+            for parameter in params.items():
+                old_name, parameter = parameter
+
+                if old_name.endswith(str(map_[0])):
+                    new_name = '_'.join(old_name.split(
+                        '_')[:-1]) + '_' + str(map_[1])
+                    new_params[new_name] = new_params[old_name]
+
+                    if old_name != new_name:
+                        del new_params[old_name]
+
+        result.params = new_params
+        return result
+
+    def save_state(self):
+        save = {'title': self.title,
+                'results': self.results,
+                'settings': self.settings}
+
+        return save, [self.lmfit_tab]
+
+    def get_title(self):
         return 'Results'
 
     def change_slice(self):
-
         index = self.slider.get_index()
 
         self.current_result = self.results[0] if len(
@@ -300,46 +357,41 @@ class LMFitResultTab(LMFitBaseTab, LMFitTab_UI):
         self._refresh_orbital_plots()
 
     def refresh_selected_plot(self):
-
         params = self.current_result[1].params
         super().refresh_selected_plot(params)
 
     def refresh_sum_plot(self):
-
         params = self.current_result[1].params
         return super().refresh_sum_plot(params)
 
     def refresh_residual_plot(self, weight_sum_data=None):
-
         params = self.current_result[1].params
         super().refresh_residual_plot(params, weight_sum_data)
 
     def update_tree(self):
-
         params = self.current_result[1].params
         self.tree.update_result(params)
 
     def print_result(self):
-
         report = self.result.get_fit_report()
 
         print(report)
 
     def print_covariance_matrix(self):
-
         cov_matrix = self.result.get_covariance_matrix()
 
         print(cov_matrix)
 
-    def plot(self):
+    def get_orbitals(self):
+        return self.model.orbitals
 
+    def plot(self):
         results = [result[1] for result in self.results]
         orbitals = self.model.orbitals
         axis = self.model.sliced_data.axes[self.model.slice_policy[0]]
         self.open_plot_tab.emit(results, orbitals, axis)
 
     def _setup(self):
-
         LMFitBaseTab._setup(self)
 
         self.result = LMFitResult(self.current_result[1], self.model)
@@ -358,7 +410,6 @@ class LMFitResultTab(LMFitBaseTab, LMFitTab_UI):
         self.layout.insertWidget(1, self.tree)
 
     def _connect(self):
-
         self.result.print_triggered.connect(self.print_result)
         self.result.cov_matrix_requested.connect(self.print_covariance_matrix)
         self.result.plot_requested.connect(self.plot)

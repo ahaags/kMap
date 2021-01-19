@@ -64,25 +64,24 @@ class SlicedData(AbstractData):
             # Read all datasets
             for key, value in file.items():
                 if key == file_keys['name']:
-                    name = str(file[key][()])
+                    name = str(file[key].asstr()[...])
 
                 elif key == file_keys['axis_1_label']:
-                    axis_1_label = file[key][()]
+                    axis_1_label = str(file[key].asstr()[...])
 
                 elif key == file_keys['axis_2_label']:
-                    axis_2_label = file[key][()]
+                    axis_2_label = str(file[key].asstr()[...])
 
                 elif key == file_keys['axis_3_label']:
-                    axis_3_label = file[key][()]
-
+                    axis_3_label = str(file[key].asstr()[...])
                 elif key == file_keys['axis_1_units']:
-                    axis_1_units = file[key][()]
+                    axis_1_units = str(file[key].asstr()[...])
 
                 elif key == file_keys['axis_2_units']:
-                    axis_2_units = file[key][()]
+                    axis_2_units = str(file[key].asstr()[...])
 
                 elif key == file_keys['axis_3_units']:
-                    axis_3_units = file[key][()]
+                    axis_3_units = str(file[key].asstr()[...])
 
                 elif key == file_keys['axis_1_range']:
                     axis_1_range = file[key][()]
@@ -97,7 +96,11 @@ class SlicedData(AbstractData):
                     data = file[key][()]
 
                 else:
-                    meta_data.update({key: str(file[key][()])})
+                    try:
+                        meta_data.update({key: str(file[key].asstr()[...])})
+
+                    except:
+                        meta_data.update({key: str(file[key][()])})
 
         axis_1 = [axis_1_label, axis_1_units, axis_1_range]
         axis_2 = [axis_2_label, axis_2_units, axis_2_range]
@@ -236,8 +239,8 @@ class SlicedData(AbstractData):
 
         return cls(name, axis_1, axis_2, axis_3, data, meta_data)
 
-    @classmethod 
-    def init_from_orbital_cube(cls, name, orbital, parameters):    
+    @classmethod
+    def init_from_orbital_cube(cls, name, orbital, parameters):
         """Returns a SlicedData object with the data[x,y,z] 
            taken from the real space wave function in orbital.
 
@@ -278,16 +281,20 @@ class SlicedData(AbstractData):
         else:
             file = open(orbital_file).read()
 
-        orbital_data = Orbital(file, dk3D=dk3D, E_kin_max=E_kin_max, value=value)
+        orbital_data = Orbital(
+            file, dk3D=dk3D, E_kin_max=E_kin_max, value=value)
 
         # set name for SliceData object
         name = orbital_data.psi['name']
 
         # set axis and data
         if domain == 'real-space':
-            axis_1 = ['x', 'Å', [orbital_data.psi['x'][0], orbital_data.psi['x'][-1]]]
-            axis_2 = ['y', 'Å', [orbital_data.psi['y'][0], orbital_data.psi['y'][-1]]]
-            axis_3 = ['z', 'Å', [orbital_data.psi['z'][0], orbital_data.psi['z'][-1]]]
+            axis_1 = ['x', 'Å', [orbital_data.psi['x']
+                                 [0], orbital_data.psi['x'][-1]]]
+            axis_2 = ['y', 'Å', [orbital_data.psi['y']
+                                 [0], orbital_data.psi['y'][-1]]]
+            axis_3 = ['z', 'Å', [orbital_data.psi['z']
+                                 [0], orbital_data.psi['z'][-1]]]
             data = orbital_data.psi['data']
 
         else:

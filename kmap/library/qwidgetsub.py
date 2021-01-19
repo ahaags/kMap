@@ -173,8 +173,13 @@ class Tab(QTabWidget):
     def __init__(self, *args, **kwargs):
 
         self.title = None
-
+        self.lock_tab = None
+        self.locked_tabs = []
+        
         super(Tab, self).__init__(*args, **kwargs)
+
+    def save_state(self):
+        pass
 
     def get_title(self):
 
@@ -183,6 +188,14 @@ class Tab(QTabWidget):
     def set_title(self, title):
 
         self.title = title
+
+    def lock_while_open(self, tab):
+
+        self.lock_tab=tab
+
+    def unlock(self):
+
+        self.lock_tab = None
 
     def closeEvent(self, event):
 

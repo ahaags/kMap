@@ -1,26 +1,26 @@
+# Python Imports
+import os
+
 # PyQt5 Imports
 from PyQt5 import uic
 from PyQt5.QtWidgets import QWidget
-from PyQt5.QtCore import QDir, pyqtSignal
+from PyQt5.QtCore import pyqtSignal
 
 # Own Imports
 from kmap import __directory__
 from kmap.config.config import config
 
 # Load .ui File
-UI_file = __directory__ + QDir.toNativeSeparators('/ui/lmfitoptions.ui')
+UI_file = __directory__ / 'ui/lmfitoptions.ui'
 LMFitOptions_UI, _ = uic.loadUiType(UI_file)
 
 
 class LMFitOptions(QWidget, LMFitOptions_UI):
-
     fit_triggered = pyqtSignal()
     region_changed = pyqtSignal(str, bool)
     background_changed = pyqtSignal(str)
     method_changed = pyqtSignal(str)
     slice_policy_changed = pyqtSignal(str)
-
-    equations_path = __directory__+ QDir.toNativeSeparators('/resources/misc/background_equations')
 
     def __init__(self, parent):
 
@@ -29,6 +29,22 @@ class LMFitOptions(QWidget, LMFitOptions_UI):
         self.setupUi(self)
         self._setup()
         self._connect(parent)
+
+    def save_state(self):
+
+        save = {'slices': self.slice_combobox.currentIndex(),
+                'region': self.region_comboBox.currentIndex(),
+                'method': self.method_combobox.currentIndex(),
+                'background': self.background_combobox.currentText()}
+
+        return save
+
+    def restore_state(self, save):
+
+        self.slice_combobox.setCurrentIndex(save['slices'])
+        self.region_comboBox.setCurrentIndex(save['region'])
+        self.method_combobox.setCurrentIndex(save['method'])
+        self.background_combobox.setCurrentText(save['background'])
 
     def get_region(self):
 
@@ -116,11 +132,15 @@ class LMFitOptions(QWidget, LMFitOptions_UI):
 
     def _setup(self):
 
-        with open(LMFitOptions.equations_path, 'r') as file:
+        temp = __directory__ / config.get_key('paths', 'equations')
+        default = temp / 'background_equations_default'
+        user = temp / 'background_equations_user'
+        self.path = user if os.path.isfile(user) else default
+
+        with open(self.path, 'r') as file:
             equations = file.read().split('\n')
 
         for equation in equations:
-
             self.background_combobox.addItem(equation)
 
         self.background_combobox.setCurrentIndex(0)
