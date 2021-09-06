@@ -2,8 +2,8 @@
 import logging
 
 # Third Party Imports
-import numpy as np
 import h5py
+import numpy as np
 
 # PyQt5 Imports
 from PyQt5 import uic
@@ -137,6 +137,8 @@ class OrbitalDataTab(Tab, OrbitalDataTab_UI):
             self.refresh_mini_plots(ID, orbital_changed=False)
 
     def remove_orbital_by_ID(self, ID):
+        self.model.remove_orbital_by_ID(ID)
+
         self.refresh_plot()
         self.mini_3Dkspace_plot.set_orbital(None, ID)
         self.mini_real_plot.set_orbital(None)
@@ -148,10 +150,14 @@ class OrbitalDataTab(Tab, OrbitalDataTab_UI):
             print('Only interpolated OrbitalData can be exported.')
             return
 
-        start_path = __directory__ / config.get_key('paths',
-                                                    'hdf5_export_start')
-        file_name, _ = QFileDialog.getSaveFileName(
-            None, 'Save .hdf5 File (*.hdf5)', str(start_path))
+        path = config.get_key('paths', 'hdf5_export_start')
+        if path == 'None':
+            file_name, _ = QFileDialog.getSaveFileName(
+                None, 'Save .hdf5 File (*.hdf5)')
+        else:
+            start_path = str(__directory__ / path)
+            file_name, _ = QFileDialog.getSaveFileName(
+                None, 'Save .hdf5 File (*.hdf5)', str(start_path))
 
         if not file_name:
             return
@@ -230,7 +236,8 @@ class OrbitalDataTab(Tab, OrbitalDataTab_UI):
                 'cube_options': cube_options_save,
                 'real_space_options': real_space_options_save,
                 'orbital': orbital_save,
-                'colormap': colormap_save}
+                'colormap': colormap_save,
+                'title': self.title}
 
         return save, []
 
